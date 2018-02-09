@@ -5,6 +5,7 @@ import torch
 
 from dataset import load_glove, process_data_trec
 from trainer import train
+from evaluator import evaluate
 
 
 def solve(args):
@@ -43,30 +44,46 @@ def solve(args):
     try:
         lr_milestones = map(int, args.lr_milestones.split(','))
     except:
-        print('[WARN] Cannot parse lr_milestones {}'.format(args.lr_milestones))
+        print('[WARN] Cannot parse lr_milestones {}'.format(
+            args.lr_milestones))
         lr_milestones = None
-    train(
-        args.task,
-        num_class,
-        len(word2id),
-        args.logs_dir,
-        args.models_dir,
-        datafolds,
-        num_folds,
-        glove,
-        args.epochs,
-        args.batch_size,
-        input_size,
-        hidden_size,
-        args.lr,
-        lr_milestones,
-        args.weight_decay,
-        use_gpu=args.gpu)
+    if args.phase == 'train':
+        train(
+            args.task,
+            num_class,
+            len(word2id),
+            args.logs_dir,
+            args.models_dir,
+            datafolds,
+            num_folds,
+            glove,
+            args.epochs,
+            args.batch_size,
+            input_size,
+            hidden_size,
+            args.lr,
+            lr_milestones,
+            args.weight_decay,
+            use_gpu=args.gpu)
+    else:
+        correct, total = evaluate(args.checkpoint_path, num_class,
+                                  len(word2id), datafolds, glove, args.gpu)
+        print('{} / {} = {:.3f}'.format(correct, total,
+                                        float(correct) / total))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', default='TREC', help='Dataset name')
+    parser.add_argument(
+        '--phase',
+        default='train',
+        choices=['train', 'eval'],
+        help='Phase: train/eval')
+    parser.add_argument(
+        '--checkpoint_path',
+        default='',
+        help='Checkpoint path used in evaluation')
     parser.add_argument('--data_dir', default='data')
     parser.add_argument('--logs_dir', default='logs')
     parser.add_argument('--models_dir', default='models')

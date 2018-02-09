@@ -44,3 +44,11 @@
 ```bash
 python main.py --gpu
 ```
+
+
+## Evaluate
+
+```bash
+python main.py --gpu --phase=eval \
+    --checkpoint_path=models/TREC_batchsize25_input300_hidden100_lr0.008_ms11_wc0.0001_glove_epoch12.pth
+```
