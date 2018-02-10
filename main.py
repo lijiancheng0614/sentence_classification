@@ -92,9 +92,9 @@ def main():
     parser.add_argument(
         '--batch_size', type=int, default=25, help='Batch size')
     parser.add_argument(
-        '--lr', type=float, default=0.008, help='Initial learning rate')
+        '--lr', type=float, default=0.01, help='Initial learning rate')
     parser.add_argument(
-        '--lr_milestones', default='11', help='Milestones for MultiStepLR')
+        '--lr_milestones', default='31', help='Milestones for MultiStepLR')
     parser.add_argument(
         '--weight_decay', type=float, default=1e-4, help='Weight decay')
     parser.add_argument(

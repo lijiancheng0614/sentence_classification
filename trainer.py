@@ -56,7 +56,7 @@ def train(task,
         dataset_train += datafolds[i]
     dataset_eval = datafolds[-1]
     scheduler = None if not lr_milestones else optim.lr_scheduler.MultiStepLR(
-        optimizer, lr_milestones, gamma=0.5)
+        optimizer, lr_milestones, gamma=0.1)
     # train
     for epoch in range(epochs):
         if scheduler is not None:

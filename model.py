@@ -22,8 +22,7 @@ class TreeNet(nn.Module):
                                                 glove_input_size)
             self.word_embeddings.weight.data.copy_(glove)
         self.word_embeddings.weight.requires_grad = False
-        self.encode_x = nn.Linear(input_size, hidden_size * 4)
-        self.encode_h = nn.Linear(hidden_size, hidden_size * 4)
+        self.encode_x = nn.Linear(input_size, hidden_size * 3)
         self.encode_s = nn.Linear(hidden_size, hidden_size * 3)
         self.encode_c = nn.Linear(hidden_size, hidden_size * 3)
 
@@ -32,42 +31,44 @@ class TreeNet(nn.Module):
         cell = torch.zeros(1, self.hidden_size)
         if self.use_gpu:
             hidden, cell = hidden.cuda(), cell.cuda()
-        return Variable(
-            hidden, requires_grad=False), Variable(
-                cell, requires_grad=False)
+        return Variable(hidden, requires_grad=False), \
+               Variable(cell, requires_grad=False)
 
-    def node_forward(self, inputs, hidden_x, cell_x):
-        gates = self.encode_h(hidden_x) + self.encode_x(inputs)
-        i, o, f, c = gates.chunk(4, 1)
-        i, o, f, c = F.sigmoid(i), F.sigmoid(o), F.sigmoid(f), F.tanh(c)
-        cell = f * cell_x + i * c
-        hidden = o * F.tanh(cell)
+    def node_forward(self, inputs):
+        gates = self.encode_x(inputs)
+        gate_input, gate_output, cell = gates.chunk(3, 1)
+        gate_input, gate_output, cell = F.sigmoid(gate_input), \
+                                        F.sigmoid(gate_output), \
+                                        F.tanh(cell)
+        cell = gate_input * cell
+        hidden = gate_output * F.tanh(cell)
         return hidden, cell
 
     def forward(self, tree_node, state=None):
         if state is None:
             state = self.init_state()
-        hidden_x, cell_x = state
+        hidden_sibling, cell_sibling = state
         if tree_node.is_leaf():
             word = torch.LongTensor([tree_node.word])
             if self.use_gpu:
                 word = word.cuda()
             word = Variable(word, requires_grad=False)
             embeds = self.word_embeddings(word)
-            hidden_child, cell_child = self.node_forward(
-                embeds, *self.init_state())
-            gates = self.encode_s(hidden_x) + self.encode_c(hidden_child)
+            hidden_child, cell_child = self.node_forward(embeds)
+            gates = self.encode_s(hidden_sibling) + self.encode_c(hidden_child)
         else:
             self.forward(tree_node.children[0])
             for i in range(1, len(tree_node.children)):
                 self.forward(tree_node.children[i],
                              tree_node.children[i - 1].state)
             hidden_child, cell_child = tree_node.children[-1].state
-            gates = self.encode_s(hidden_x) + self.encode_c(hidden_child)
-        i, o, f = gates.chunk(3, 1)
-        i, o, f = F.sigmoid(i), F.sigmoid(o), F.sigmoid(f)
-        cell = f * cell_x + i * cell_child
-        hidden = o * F.tanh(cell)
+            gates = self.encode_s(hidden_sibling) + self.encode_c(hidden_child)
+        gate_sibling, gate_child, gate_output = gates.chunk(3, 1)
+        gate_sibling, gate_child, gate_output = F.sigmoid(gate_sibling), \
+                                                F.sigmoid(gate_child), \
+                                                F.sigmoid(gate_output)
+        cell = gate_sibling * cell_sibling + gate_child * cell_child
+        hidden = gate_output * F.tanh(cell)
         tree_node.state = hidden, cell
         return hidden
 
