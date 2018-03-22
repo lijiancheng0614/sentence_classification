@@ -20,7 +20,11 @@ def solve(args):
             os.path.join(data_dir, 'labels_train.txt'),
             os.path.join(data_dir, 'labels_test.txt')
         ]
-        dataset, word2id = process_data_trec(json_paths, labels_paths)
+        if args.phase == 'dev':
+            dataset, word2id = process_data_trec(json_paths[:1], labels_paths[:1])
+            random.shuffle(dataset)
+        else:
+            dataset, word2id = process_data_trec(json_paths, labels_paths)
         datafolds = [dataset[:-500], dataset[-500:]]
         num_folds = 2
     else:
@@ -44,17 +48,17 @@ def solve(args):
     try:
         lr_milestones = map(int, args.lr_milestones.split(','))
     except:
-        print('[WARN] Cannot parse lr_milestones {}'.format(
-            args.lr_milestones))
         lr_milestones = None
-    if args.phase == 'train':
+    if args.mode == 'train':
         train(
             args.task,
+            args.phase,
             num_class,
             len(word2id),
             args.logs_dir,
             args.models_dir,
             datafolds,
+            args.seed,
             num_folds,
             glove,
             args.epochs,
@@ -76,10 +80,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', default='TREC', help='Dataset name')
     parser.add_argument(
-        '--phase',
+        '--mode',
         default='train',
         choices=['train', 'eval'],
-        help='Phase: train/eval')
+        help='Mode: train/eval')
+    parser.add_argument(
+        '--phase',
+        default='test',
+        choices=['dev', 'test'],
+        help='Phase: dev/test')
     parser.add_argument(
         '--checkpoint_path',
         default='',
@@ -88,18 +97,18 @@ def main():
     parser.add_argument('--logs_dir', default='logs')
     parser.add_argument('--models_dir', default='models')
     parser.add_argument(
-        '--epochs', type=int, default=40, help='Maximum epochs')
+        '--epochs', type=int, default=50, help='Maximum epochs')
     parser.add_argument(
         '--batch_size', type=int, default=25, help='Batch size')
     parser.add_argument(
-        '--lr', type=float, default=0.008, help='Initial learning rate')
+        '--lr', type=float, default=0.001, help='Initial learning rate')
     parser.add_argument(
-        '--lr_milestones', default='11', help='Milestones for MultiStepLR')
+        '--lr_milestones', default='', help='Milestones for MultiStepLR')
     parser.add_argument(
         '--weight_decay', type=float, default=1e-4, help='Weight decay')
     parser.add_argument(
         '--glove_path',
-        default='data/glove.840B.300d.txt',
+        default='',
         help='GloVe path, leave empty string if GloVe is not used')
     parser.add_argument('--gpu', action='store_true', help='Use GPU')
     parser.add_argument('--seed', type=int, default=10137)

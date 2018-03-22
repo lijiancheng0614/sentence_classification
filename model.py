@@ -16,12 +16,13 @@ class TreeNet(nn.Module):
         self.hidden_size = hidden_size
         if glove is None:
             self.word_embeddings = nn.Embedding(vocab_size, input_size)
+            self.word_embeddings.weight.requires_grad = True
         else:
             glove_vocab_size, glove_input_size = glove.size()
             self.word_embeddings = nn.Embedding(glove_vocab_size,
                                                 glove_input_size)
             self.word_embeddings.weight.data.copy_(glove)
-        self.word_embeddings.weight.requires_grad = False
+            self.word_embeddings.weight.requires_grad = False
         self.encode_x = nn.Linear(input_size, hidden_size * 4)
         self.encode_h = nn.Linear(hidden_size, hidden_size * 4)
         self.encode_s = nn.Linear(hidden_size, hidden_size * 3)

@@ -16,11 +16,13 @@ def add_log(filepath, text=''):
 
 
 def train(task,
+          phase,
           num_class,
           num_words,
           logs_dir,
           models_dir,
           datafolds,
+          seed,
           num_folds=10,
           glove=None,
           epochs=20,
@@ -32,11 +34,11 @@ def train(task,
           weight_decay=1e-4,
           log_iteration_interval=500,
           use_gpu=False):
-    config_string = '{}_batchsize{}_input{}_hidden{}_lr{}{}_wc{}{}'.format(
-        task, batch_size, input_size, hidden_size, lr,
+    config_string = '{}_{}_batchsize{}_input{}_hidden{}_lr{}{}_wc{}{}_seed{}'.format(
+        task, phase, batch_size, input_size, hidden_size, lr,
         '' if not lr_milestones
         else '_ms' + ','.join([str(i) for i in lr_milestones]),
-        weight_decay, '_glove' if glove is not None else '')
+        weight_decay, '_glove' if glove is not None else '', seed)
     log_train_path = os.path.join(logs_dir,
                                   'train_{}.txt'.format(config_string))
     log_eval_path = os.path.join(logs_dir, 'eval_{}.txt'.format(config_string))

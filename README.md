@@ -41,14 +41,31 @@
 
 ## Train
 
+- Without glove
+
 ```bash
 python main.py --gpu
+```
+
+- With glove
+
+```bash
+python main.py --gpu --glove_path=data/glove.840B.300d.txt --lr=0.008 --lr_milestones=11
 ```
 
 
 ## Evaluate
 
+- Without glove
+
 ```bash
-python main.py --gpu --phase=eval \
-    --checkpoint_path=models/TREC_batchsize25_input300_hidden100_lr0.008_ms11_wc0.0001_glove_epoch12.pth
+python main.py --gpu --mode=eval \
+    --checkpoint_path=models/TREC_test_batchsize25_input300_hidden100_lr0.001_seed10137_epoch48.pth
+```
+
+- With glove
+
+```bash
+python main.py --gpu --mode=eval \
+    --checkpoint_path=models/TREC_test_batchsize25_input300_hidden100_lr0.008_ms11_wc0.0001_glove_seed10137_epoch12.pth
 ```
