@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from metrics import Metrics
 
 
 class TreeNet(nn.Module):
@@ -102,3 +103,54 @@ class Classifier(nn.Module):
         ]
         correct = sum(results)
         return correct, len(dataset)
+
+
+# module for distance-angle similarity
+class Similarity(nn.Module):
+    def __init__(self, mem_dim, hidden_dim, num_classes):
+        super(Similarity, self).__init__()
+        self.mem_dim = mem_dim
+        self.hidden_dim = hidden_dim
+        self.num_classes = num_classes
+        self.wh = nn.Linear(2 * self.mem_dim, self.hidden_dim)
+        self.wp = nn.Linear(self.hidden_dim, self.num_classes)
+
+    def forward(self, lvec, rvec):
+        mult_dist = torch.mul(lvec, rvec)
+        abs_dist = torch.abs(torch.add(lvec, -rvec))
+        vec_dist = torch.cat((mult_dist, abs_dist), 1)
+
+        out = F.sigmoid(self.wh(vec_dist))
+        out = F.log_softmax(self.wp(out), dim=1)
+        return out
+
+
+class SimilarityClassifier(nn.Module):
+    def __init__(self, input_size, hidden_size, hidden_dim, num_class, vocab_size, glove=None, use_gpu=False):
+        super(SimilarityClassifier, self).__init__()
+        self.num_class = num_class
+        self.metrics = Metrics(num_class)
+        self.unit = TreeNet(input_size, hidden_size, vocab_size, glove, use_gpu)
+        self.similarity = Similarity(hidden_size, hidden_dim, num_class)
+
+    def forward(self, ltree, rtree):
+        lhidden = self.unit(ltree)
+        rhidden = self.unit(rtree)
+        output = self.similarity(lhidden, rhidden)
+        return output
+
+    def evalute(self, ltree, rtree):
+        indices = torch.arange(1, self.num_class + 1)
+        lhidden = self.unit(ltree)
+        rhidden = self.unit(rtree)
+        output = self.similarity(lhidden, rhidden)
+        output = output.data.squeeze().cpu()
+        predic = torch.dot(indices, torch.exp(output))
+        return predic
+
+    def evalute_dataset(self, dataset):
+        results = [self.evalute(ltree, rtree) for ltree, rtree, label in dataset]
+        targets = [label for _, _, label in dataset]
+        pearson = self.metrics.pearson(results, targets)
+        mse = self.metrics.mse(results, targets)
+        return pearson, mse

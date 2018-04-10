@@ -6,7 +6,8 @@ import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
 
-from model import Classifier
+from model import Classifier, SimilarityClassifier
+from utils import map_label_to_target
 
 
 def add_log(filepath, text=''):
@@ -43,9 +44,19 @@ def train(task,
                                   'train_{}.txt'.format(config_string))
     log_eval_path = os.path.join(logs_dir, 'eval_{}.txt'.format(config_string))
     print('[INFO] {}'.format(config_string))
-    classifier = Classifier(input_size, hidden_size, num_class, num_words,
+
+    if task == 'TREC':
+        classifier = Classifier(input_size, hidden_size, num_class, num_words,
                             glove, use_gpu)
-    criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss()
+    elif task == 'SICK':
+        classifier = SimilarityClassifier(input_size, hidden_size, hidden_dim=50,
+                                          num_class=num_class, vocab_size=num_words,
+                                          glove=glove, use_gpu=use_gpu)
+        criterion = nn.KLDivLoss()
+    else:
+        raise NotImplementedError
+
     if use_gpu:
         classifier = classifier.cuda()
         criterion = criterion.cuda()
@@ -59,6 +70,9 @@ def train(task,
     dataset_eval = datafolds[-1]
     scheduler = None if not lr_milestones else optim.lr_scheduler.MultiStepLR(
         optimizer, lr_milestones, gamma=0.5)
+
+    print('train dataset size: {}'.format(len(dataset_train)))
+    print('test dataset size: {}'.format(len(dataset_eval)))
     # train
     for epoch in range(epochs):
         if scheduler is not None:
@@ -66,13 +80,22 @@ def train(task,
         random.shuffle(dataset_train)
         optimizer.zero_grad()
         log_loss = 0
+
         for iteration in range(1, len(dataset_train) + 1):
-            tree_root, label = dataset_train[iteration - 1]
-            output = classifier(tree_root)
-            target = Variable(torch.LongTensor([label]), requires_grad=False)
-            if use_gpu:
-                target = Variable(
-                    torch.LongTensor([label]).cuda(), requires_grad=False)
+            if task == 'TREC':
+                tree_root, label = dataset_train[iteration - 1]
+                output = classifier(tree_root)
+                target = Variable(torch.LongTensor([label]), requires_grad=False)
+                if use_gpu:
+                    target = Variable(
+                        torch.LongTensor([label]).cuda(), requires_grad=False)
+            elif task == 'SICK':
+                ltree, rtree, label = dataset_train[iteration - 1]
+                output = classifier(ltree, rtree)
+                target = map_label_to_target(label, num_class)
+                target = torch.FloatTensor(target).cuda()
+                target = Variable(target, requires_grad=False)
+
             loss = criterion(output, target)
             loss.backward()
             if iteration % batch_size == 0:
@@ -85,10 +108,14 @@ def train(task,
                     time.ctime(), iteration, log_loss))
                 log_loss = 0
         # evaluate
-        correct, total = classifier.evalute_dataset(dataset_eval)
-        add_log(log_eval_path, '{} / {} = {:.3f}'.format(
-            correct, total,
-            float(correct) / total))
+        if task == 'TREC':
+            correct, total = classifier.evalute_dataset(dataset_eval)
+            add_log(log_eval_path, '{} / {} = {:.3f}'.format(
+                correct, total,
+                float(correct) / total))
+        elif task == 'SICK':
+            pearson, mse = classifier.evalute_dataset(dataset_eval)
+            add_log(log_eval_path, 'pearson: {}, mse: {}'.format(pearson, mse))
         # save checkpoint
         checkpoint = {
             'model': classifier.state_dict(),

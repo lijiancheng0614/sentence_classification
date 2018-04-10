@@ -3,7 +3,7 @@ import os
 import random
 import torch
 
-from dataset import load_glove, process_data_trec
+from dataset import load_glove, process_data_trec, process_data_sick
 from trainer import train
 from evaluator import evaluate
 
@@ -27,6 +27,28 @@ def solve(args):
             dataset, word2id = process_data_trec(json_paths, labels_paths)
         datafolds = [dataset[:-500], dataset[-500:]]
         num_folds = 2
+    elif args.task == 'SICK':
+        data_dir = os.path.join(args.data_dir, 'sick', 'data')
+        a_json_paths = [
+            os.path.join(data_dir, 'train', 'a.txt.json'),
+            os.path.join(data_dir, 'dev', 'a.txt.json'),
+            os.path.join(data_dir, 'test', 'a.txt.json')
+        ]
+        b_json_paths = [
+            os.path.join(data_dir, 'train', 'b.txt.json'),
+            os.path.join(data_dir, 'dev', 'b.txt.json'),
+            os.path.join(data_dir, 'test', 'b.txt.json')
+        ]
+        labels_paths = [
+            os.path.join(data_dir, 'train', 'sim.txt'),
+            os.path.join(data_dir, 'dev', 'sim.txt'),
+            os.path.join(data_dir, 'test', 'sim.txt')
+        ]
+
+        dataset, word2id = process_data_sick(a_json_paths, b_json_paths, labels_paths)
+        datafolds = dataset[0:2]
+        num_folds = 2
+        num_class = 5
     else:
         print('[ERROR] Unknown task')
         return
