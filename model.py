@@ -153,4 +153,5 @@ class SimilarityClassifier(nn.Module):
         targets = [label for _, _, label in dataset]
         pearson = self.metrics.pearson(results, targets)
         mse = self.metrics.mse(results, targets)
-        return pearson, mse
+        spearman = self.metrics.spearman(results, targets)
+        return pearson, mse, spearman

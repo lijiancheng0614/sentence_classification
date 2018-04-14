@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import torch
+import math
 
 
 class Metrics():
@@ -18,3 +19,11 @@ class Metrics():
         x = torch.FloatTensor(predictions)
         y = torch.FloatTensor(labels)
         return torch.mean((x - y) ** 2)
+
+    def spearman(self, predictions, labels):
+        x = torch.FloatTensor(predictions)
+        y = torch.FloatTensor(labels)
+        x = x - x.mean()
+        y = y - y.mean()
+        return torch.dot(x,y) / math.sqrt(torch.dot(x ** 2, y ** 2))
+

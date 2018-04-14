@@ -81,7 +81,8 @@ def train(task,
         optimizer.zero_grad()
         log_loss = 0
 
-        for iteration in range(1, len(dataset_train) + 1):
+        len_dataset_train = len(dataset_train)
+        for iteration in range(1, len_dataset_train + 1):
             if task == 'TREC':
                 tree_root, label = dataset_train[iteration - 1]
                 output = classifier(tree_root)
@@ -114,8 +115,8 @@ def train(task,
                 correct, total,
                 float(correct) / total))
         elif task == 'SICK':
-            pearson, mse = classifier.evalute_dataset(dataset_eval)
-            add_log(log_eval_path, 'pearson: {}, mse: {}'.format(pearson, mse))
+            pearson, mse, spearman = classifier.evalute_dataset(dataset_eval)
+            add_log(log_eval_path, 'pearson: {}, mse: {}, spearman: {}'.format(pearson, mse, spearman))
         # save checkpoint
         checkpoint = {
             'model': classifier.state_dict(),
