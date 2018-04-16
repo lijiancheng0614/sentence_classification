@@ -5,6 +5,10 @@ Preprocessing script for SICK data.
 import os
 import glob
 
+def make_dirs(dirs):
+    for d in dirs:
+        if not os.path.exists(d):
+            os.makedirs(d)
 
 def build_vocab(filepaths, dst_path, lowercase=True):
     vocab = set()
