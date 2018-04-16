@@ -9,4 +9,4 @@ unzip -q -o sick_train.zip
 wget -c http://alt.qcri.org/semeval2014/task1/data/uploads/sick_trial.zip
 unzip -q -o sick_trial.zip
 wget -c http://alt.qcri.org/semeval2014/task1/data/uploads/sick_test_annotated.zip
-zip -q -o sick_test_annotated.zip
+unzip -q -o sick_test_annotated.zip
